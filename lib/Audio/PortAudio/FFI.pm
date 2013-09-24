@@ -12,4 +12,17 @@ Audio::PortAudio::FFI - PortAudio bindings via FFI::Raw
 
 =cut
 
+use v5.14;
+use FFI::Raw;
+
+my $pa_getversion = FFI::Raw->new(
+  'libportaudio.so',
+  'Pa_GetVersion',
+  FFI::Raw::int # return value
+);
+
+sub pa_getversion {
+  $pa_getversion->();
+}
+
 1;
