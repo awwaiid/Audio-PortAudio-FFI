@@ -16,9 +16,10 @@ use v5.14;
 use FFI::Raw;
 use Config;
 
-use constant ulong => ord 'L';
-# cheating for ulong type
-# FIXME: submit patch to FFI::RAW
+use constant long  => FFI::Raw::int;
+use constant ulong => FFI::Raw::uint;
+# FFI::Raw 1.04 lacks a long type, but internally it
+# is explicitly 32 bits for its integer types. Not ideal?
 
 use constant {
   PA_LIBRARY  => 'libportaudio.so.2',
@@ -68,7 +69,7 @@ use constant {
   PA_INPUT_OVERFLOW   => 0x00000002,
   PA_OUTPUT_UNDERFLOW => 0x00000004,
   PA_OUTPUT_OVERFLOW  => 0x00000008,
-  PA_PRIMING_OUTPUT   => 0X00000010,
+  PA_PRIMING_OUTPUT   => 0x00000010,
   
   PA_STREAM_CALLBACK_RESULT => FFI::Raw::int,
   PA_CONTINUE => 0,
@@ -98,13 +99,133 @@ my %funcs = (
     FFI::Raw::str,
     PA_ERROR,
   ],
+  
   Pa_Initialize => [
     PA_ERROR,
   ],
   Pa_Terminate => [
     PA_ERROR,
   ],
+  
+  Pa_GetHostApiCount => [
+    PA_DEVICE_INDEX,
+  ],
+  Pa_GetDefaultHostApi => [
+    PA_DEVICE_INDEX,
+  ],
+  Pa_GetHostApiInfo => [
+    FFI::Raw::ptr,
+    FFI::Raw::int,
+  ],
+  Pa_HostApiTypeIdToHostApiIndex => [
+    PA_HOST_API_INDEX,
+    PA_HOST_API_TYPE_ID,
+  ],
+  
+  Pa_HostApiDeviceIndexToDeviceIndex => [
+    PA_DEVICE_INDEX,
+    PA_HOST_API_INDEX, FFI::Raw::int,
+  ],
+  Pa_GetLastHostErrorInfo => [
+    FFI::Raw::ptr,
+  ],
+  Pa_GetDeviceCount => [
+    PA_DEVICE_INDEX,
+  ],
+  Pa_GetDefaultInputDevice => [
+    PA_DEVICE_INDEX,
+  ],
+  Pa_GetDefaultOutputDevice => [
+    PA_DEVICE_INDEX,
+  ],
+  Pa_GetDeviceInfo => [
+    FFI::Raw::ptr,
+    PA_DEVICE_INDEX,
+  ],
+  
+  Pa_IsFormatSupported => [
+    PA_ERROR,
+    FFI::Raw::ptr, FFI::Raw::ptr, FFI::Raw::double,
+  ],
+  
+  Pa_OpenStream => [
+    PA_ERROR,
+    FFI::Raw::ptr, FFI::Raw::ptr, FFI::Raw::ptr, FFI::Raw::double, ulong, PA_STREAM_FLAGS, PA_STREAM_CALLBACK, FFI::Raw::ptr,
+  ],
+  Pa_OpenDefaultStream => [
+    PA_ERROR,
+    FFI::Raw::ptr, FFI::Raw::int, FFI::Raw::int, PA_SAMPLE_FORMAT, FFI::Raw::double, ulong, PA_STREAM_CALLBACK, FFI::Raw::ptr,
+  ],
+  Pa_CloseStream => [
+    PA_ERROR,
+    FFI::Raw::ptr,
+  ],
+  
+  Pa_SetStreamFinishedCallback => [
+    PA_ERROR,
+    FFI::Raw::ptr, FFI::Raw::ptr,
+  ],
+  
+  Pa_StartStream => [
+    PA_ERROR,
+    FFI::Raw::ptr,
+  ],
+  Pa_StopStream => [
+    PA_ERROR,
+    FFI::Raw::ptr,
+  ],
+  Pa_AbortStream => [
+    PA_ERROR,
+    FFI::Raw::ptr,
+  ],
+  
+  Pa_IsStreamStopped => [
+    PA_ERROR,
+    FFI::Raw::ptr,
+  ],
+  Pa_IsStreamActive => [
+    PA_ERROR,
+    FFI::Raw::ptr,
+  ],
+  Pa_GetStreamInfo => [
+    FFI::Raw::ptr,
+    FFI::Raw::ptr,
+  ],
+  Pa_GetStreamTime => [
+    PA_TIME,
+    FFI::Raw::ptr,
+  ],
+  Pa_GetStreamCpuLoad => [
+    FFI::Raw::double,
+    FFI::Raw::ptr,
+  ],
+  
+  Pa_ReadStream => [
+    PA_ERROR,
+    FFI::Raw::ptr, FFI::Raw::ptr, ulong,
+  ],
+  Pa_WriteStream => [
+    PA_ERROR,
+    FFI::Raw::ptr, FFI::Raw::ptr, ulong,
+  ],
 
+  Pa_GetStreamReadAvailable => [
+    long,
+    FFI::Raw::ptr,
+  ],
+  Pa_GetStreamWriteAvailable => [
+    long,
+    FFI::Raw::ptr,
+  ],
+
+  Pa_GetSampleSize => [
+    PA_ERROR,
+    ulong,
+  ],
+  Pa_Sleep => [
+    FFI::Raw::void,
+    long,
+  ],
 );
 
 sub _build_ffi_wrappers {
