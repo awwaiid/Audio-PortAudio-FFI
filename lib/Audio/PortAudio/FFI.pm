@@ -15,14 +15,59 @@ Audio::PortAudio::FFI - PortAudio bindings via FFI::Raw
 use v5.14;
 use FFI::Raw;
 
-my $pa_getversion = FFI::Raw->new(
-  'libportaudio.so',
-  'Pa_GetVersion',
-  FFI::Raw::int # return value
+use constant {
+  PA_LIBRARY  => 'libportaudio.so.2',
+
+  PA_ERROR => FFI::Raw::int,
+};
+
+
+
+# Function signatures from libportaudio2
+# name => [ return type, arg1, arg2, ... ]
+my %extern = (
+  Pa_GetVersion => [
+    FFI::Raw::int,
+  ],
+  Pa_GetVersionText => [
+    FFI::Raw::str,
+  ],
+  Pa_GetErrorText => [
+    FFI::Raw::str,
+    PA_ERROR,
+  ],
+  Pa_Initialize => [
+    PA_ERROR,
+  ],
+  Pa_Terminate => [
+    PA_ERROR,
+  ],
+
 );
 
-sub pa_getversion {
-  $pa_getversion->();
+my %ffi = ();
+{
+  no strict 'refs';
+  for my $name ( keys %extern ){
+    my $type = shift $extern{$name};
+
+    $ffi{$name} = FFI::Raw->new(
+      PA_LIBRARY,
+      $name, $type,
+      @{ $extern{$name} }
+    );
+
+    *{ __PACKAGE__ .'::'. lc($name) } =
+    *{ __PACKAGE__ .'::'. $name     } = sub {
+      return $ffi{$name}->call(@_);
+    };
+  }
 }
+
+
+
+
+
+
 
 1;
