@@ -25,7 +25,7 @@ use constant {
 
 # Function signatures from libportaudio2
 # name => [ return type, arg1, arg2, ... ]
-my %extern = (
+my %funcs = (
   Pa_GetVersion => [
     FFI::Raw::int,
   ],
@@ -45,27 +45,27 @@ my %extern = (
 
 );
 
-my %ffi = ();
-{
+sub _build_ffi_wrappers {
+  my $funcs = shift;
+  
   no strict 'refs';
-  for my $name ( keys %extern ){
-    my $type = shift $extern{$name};
+  for my $name ( keys %$funcs ){
+    my $type = shift $funcs->{$name};
 
-    $ffi{$name} = FFI::Raw->new(
+    my $ffi = FFI::Raw->new(
       PA_LIBRARY,
       $name, $type,
-      @{ $extern{$name} }
+      @{ $funcs->{$name} }
     );
 
     *{ __PACKAGE__ .'::'. lc($name) } =
     *{ __PACKAGE__ .'::'. $name     } = sub {
-      return $ffi{$name}->call(@_);
+      return $ffi->call(@_);
     };
   }
 }
 
-
-
+_build_ffi_wrappers( \%funcs );
 
 
 
