@@ -1,7 +1,0 @@
-Port Audio::PortAudio to FFI::Raw
-
-References:
-* https://metacpan.org/release/Audio-PortAudio
-* https://metacpan.org/release/FFI-Raw
-* https://github.com/jvoorhis/ruby-portaudio
-
