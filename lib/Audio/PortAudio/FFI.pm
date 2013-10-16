@@ -25,4 +25,14 @@ sub pa_getversion {
   $pa_getversion->();
 }
 
+my $pa_getversiontext = FFI::Raw->new(
+  'libportaudio.so',
+  'Pa_GetVersionText',
+  FFI::Raw::str # return value
+);
+
+sub pa_getversiontext {
+  $pa_getversiontext->();
+}
+
 1;
