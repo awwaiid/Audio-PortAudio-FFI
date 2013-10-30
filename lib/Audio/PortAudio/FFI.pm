@@ -13,31 +13,32 @@ Audio::PortAudio::FFI - PortAudio bindings via FFI::Raw
 =cut
 
 use v5.14;
-use FFI::Raw;
 use Config;
 
-use constant long  => FFI::Raw::int;
-use constant ulong => FFI::Raw::uint;
+use FFI::Raw::Sweet qw( :core :types );
+
+ffi_lib 'libportaudio.so.2';
+
+use constant _long  => _int;
+use constant _ulong => _uint;
 # FFI::Raw 1.04 lacks a long type, but internally it
 # is explicitly 32 bits for its integer types. Not ideal?
 
 use constant {
-  PA_LIBRARY  => 'libportaudio.so.2',
-
   # Taking a page from ruby-portaudio with typedefs
   # and constants
 
-  PA_ERROR     => FFI::Raw::int,
-  PA_NO_ERROR  => FFI::Raw::int,
+  PA_ERROR     => _int,
+  PA_NO_ERROR  => _int,
 
-  PA_DEVICE_INDEX       => FFI::Raw::int,
-  PA_HOST_API_TYPE_ID   => FFI::Raw::int,
-  PA_HOST_API_INDEX     => FFI::Raw::int,
+  PA_DEVICE_INDEX       => _int,
+  PA_HOST_API_TYPE_ID   => _int,
+  PA_HOST_API_INDEX     => _int,
   PA_NO_DEVICE          => ( 2 ** $Config{longsize} ) - 1,
 
-  PA_TIME               => FFI::Raw::double,
+  PA_TIME               => _double,
 
-  PA_SAMPLE_FORMAT      => ulong,
+  PA_SAMPLE_FORMAT      => _ulong,
   PA_SAMPLE_FORMAT_MAP => {
     float32 => 0x00001,
     int32   => 0x00002,
@@ -54,7 +55,7 @@ use constant {
 
   PA_FRAMES_PER_BUFFER_UNSPECIFICED => 0,
 
-  PA_STREAM_FLAGS     => ulong,
+  PA_STREAM_FLAGS     => _ulong,
   PA_NO_FLAG          => 0,
   PA_CLIP_OFF         => 0x00000001,
   PA_DITHER_OFF       => 0x00000002,
@@ -64,20 +65,20 @@ use constant {
   PA_PLATFORM_SPECIFIC_FLAGS
                       => 0xFFFF0000,
 
-  PA_STREAM_CALLBACK_FLAGS => ulong,
+  PA_STREAM_CALLBACK_FLAGS => _ulong,
   PA_INPUT_UNDERFLOW  => 0x00000001,
   PA_INPUT_OVERFLOW   => 0x00000002,
   PA_OUTPUT_UNDERFLOW => 0x00000004,
   PA_OUTPUT_OVERFLOW  => 0x00000008,
   PA_PRIMING_OUTPUT   => 0x00000010,
 
-  PA_STREAM_CALLBACK_RESULT => FFI::Raw::int,
+  PA_STREAM_CALLBACK_RESULT => _int,
   PA_CONTINUE => 0,
   PA_COMPLETE => 1,
   PA_ABORT    => 2,
 
-  PA_STREAM_CALLBACK          => FFI::Raw::ptr,
-  PA_STREAM_FINISHED_CALLBACK => FFI::Raw::ptr,
+  PA_STREAM_CALLBACK          => _ptr,
+  PA_STREAM_FINISHED_CALLBACK => _ptr,
 
 };
 
@@ -87,179 +88,48 @@ use constant {
 
 
 # Function signatures from libportaudio2
-# name => [ return type, arg1, arg2, ... ]
-my %funcs = (
-  Pa_GetVersion => [
-    FFI::Raw::int,
-  ],
-  Pa_GetVersionText => [
-    FFI::Raw::str,
-  ],
-  Pa_GetErrorText => [
-    FFI::Raw::str,
-    PA_ERROR,
-  ],
+attach_function 'Pa_GetVersion', undef, _int;
+attach_function 'Pa_GetVersionText', undef, _str;
+attach_function 'Pa_GetErrorText', [ PA_ERROR ], _str;
+attach_function 'Pa_Initialize', undef, PA_ERROR;
+attach_function 'Pa_Terminate', undef,  PA_ERROR;
 
-  Pa_Initialize => [
-    PA_ERROR,
-  ],
-  Pa_Terminate => [
-    PA_ERROR,
-  ],
+attach_function 'Pa_GetHostApiCount', undef, PA_DEVICE_INDEX;
+attach_function 'Pa_GetDefaultHostApi', undef, PA_DEVICE_INDEX;
+attach_function 'Pa_GetHostApiInfo', [ _int ], _ptr;
+attach_function 'Pa_HostApiTypeIdToHostApiIndex', [ PA_HOST_API_TYPE_ID ], PA_HOST_API_INDEX;
+attach_function 'Pa_HostApiDeviceIndexToDeviceIndex', [ PA_HOST_API_INDEX, _int ], PA_DEVICE_INDEX;
+attach_function 'Pa_GetLastHostErrorInfo', undef, _ptr;
+attach_function 'Pa_GetDeviceCount', undef, PA_DEVICE_INDEX;
+attach_function 'Pa_GetDefaultInputDevice', undef, PA_DEVICE_INDEX;
+attach_function 'Pa_GetDefaultOutputDevice', undef, PA_DEVICE_INDEX;
+attach_function 'Pa_GetDeviceInfo', [ PA_DEVICE_INDEX ], _ptr;
+attach_function 'Pa_IsFormatSupported', [ _ptr, _ptr, _double ], PA_ERROR;
 
-  Pa_GetHostApiCount => [
-    PA_DEVICE_INDEX,
-  ],
-  Pa_GetDefaultHostApi => [
-    PA_DEVICE_INDEX,
-  ],
-  Pa_GetHostApiInfo => [
-    FFI::Raw::ptr,
-    FFI::Raw::int,
-  ],
-  Pa_HostApiTypeIdToHostApiIndex => [
-    PA_HOST_API_INDEX,
-    PA_HOST_API_TYPE_ID,
-  ],
+attach_function 'Pa_OpenStream', [ _ptr, _ptr, _ptr, _double, _ulong, PA_STREAM_FLAGS, PA_STREAM_CALLBACK, _ptr ], PA_ERROR;
+attach_function 'Pa_OpenDefaultStream', [ _ptr, _int, _int, PA_SAMPLE_FORMAT, _double, _ulong, PA_STREAM_CALLBACK, _ptr ], PA_ERROR;
+attach_function 'Pa_CloseStream', [ _ptr ], PA_ERROR;
 
-  Pa_HostApiDeviceIndexToDeviceIndex => [
-    PA_DEVICE_INDEX,
-    PA_HOST_API_INDEX, FFI::Raw::int,
-  ],
-  Pa_GetLastHostErrorInfo => [
-    FFI::Raw::ptr,
-  ],
-  Pa_GetDeviceCount => [
-    PA_DEVICE_INDEX,
-  ],
-  Pa_GetDefaultInputDevice => [
-    PA_DEVICE_INDEX,
-  ],
-  Pa_GetDefaultOutputDevice => [
-    PA_DEVICE_INDEX,
-  ],
-  Pa_GetDeviceInfo => [
-    FFI::Raw::ptr,
-    PA_DEVICE_INDEX,
-  ],
+attach_function 'Pa_SetStreamFinishedCallback', [ _ptr, _ptr ], PA_ERROR;
 
-  Pa_IsFormatSupported => [
-    PA_ERROR,
-    FFI::Raw::ptr, FFI::Raw::ptr, FFI::Raw::double,
-  ],
+attach_function 'Pa_StartStream', [ _ptr ], PA_ERROR;
+attach_function 'Pa_StopStream', [ _ptr ], PA_ERROR;
+attach_function 'Pa_AbortStream', [ _ptr ], PA_ERROR;
 
-  Pa_OpenStream => [
-    PA_ERROR,
-    FFI::Raw::ptr, FFI::Raw::ptr, FFI::Raw::ptr, FFI::Raw::double, ulong, PA_STREAM_FLAGS, PA_STREAM_CALLBACK, FFI::Raw::ptr,
-  ],
-  Pa_OpenDefaultStream => [
-    PA_ERROR,
-    FFI::Raw::ptr, FFI::Raw::int, FFI::Raw::int, PA_SAMPLE_FORMAT, FFI::Raw::double, ulong, PA_STREAM_CALLBACK, FFI::Raw::ptr,
-  ],
-  Pa_CloseStream => [
-    PA_ERROR,
-    FFI::Raw::ptr,
-  ],
+attach_function 'Pa_IsStreamStopped', [ _ptr ], PA_ERROR;
+attach_function 'Pa_IsStreamActive', [ _ptr ], PA_ERROR;
+attach_function 'Pa_GetStreamInfo', [ _ptr ], _ptr;
+attach_function 'Pa_GetStreamTime', [ _ptr ], PA_TIME;
+attach_function 'Pa_GetStreamCpuLoad', [ _ptr ], _double;
 
-  Pa_SetStreamFinishedCallback => [
-    PA_ERROR,
-    FFI::Raw::ptr, FFI::Raw::ptr,
-  ],
+attach_function 'Pa_ReadStream', [ _ptr, _ptr, _ulong ], PA_ERROR;
+attach_function 'Pa_WriteStream', [ _ptr, _ptr, _ulong ], PA_ERROR;
 
-  Pa_StartStream => [
-    PA_ERROR,
-    FFI::Raw::ptr,
-  ],
-  Pa_StopStream => [
-    PA_ERROR,
-    FFI::Raw::ptr,
-  ],
-  Pa_AbortStream => [
-    PA_ERROR,
-    FFI::Raw::ptr,
-  ],
+attach_function 'Pa_GetStreamReadAvailable', [ _ptr ], _long;
+attach_function 'Pa_GetStreamWriteAvailable', [ _ptr ], _long;
 
-  Pa_IsStreamStopped => [
-    PA_ERROR,
-    FFI::Raw::ptr,
-  ],
-  Pa_IsStreamActive => [
-    PA_ERROR,
-    FFI::Raw::ptr,
-  ],
-  Pa_GetStreamInfo => [
-    FFI::Raw::ptr,
-    FFI::Raw::ptr,
-  ],
-  Pa_GetStreamTime => [
-    PA_TIME,
-    FFI::Raw::ptr,
-  ],
-  Pa_GetStreamCpuLoad => [
-    FFI::Raw::double,
-    FFI::Raw::ptr,
-  ],
-
-  Pa_ReadStream => [
-    PA_ERROR,
-    FFI::Raw::ptr, FFI::Raw::ptr, ulong,
-  ],
-  Pa_WriteStream => [
-    PA_ERROR,
-    FFI::Raw::ptr, FFI::Raw::ptr, ulong,
-  ],
-
-  Pa_GetStreamReadAvailable => [
-    long,
-    FFI::Raw::ptr,
-  ],
-  Pa_GetStreamWriteAvailable => [
-    long,
-    FFI::Raw::ptr,
-  ],
-
-  Pa_GetSampleSize => [
-    PA_ERROR,
-    ulong,
-  ],
-  Pa_Sleep => [
-    FFI::Raw::void,
-    long,
-  ],
-);
-
-sub _build_ffi_wrappers {
-  my $pkg   = shift;
-  my $funcs = shift;
-
-  no strict 'refs';
-  for my $name ( keys %$funcs ){
-    my $type = shift $funcs->{$name};
-
-    my $ffi = FFI::Raw->new(
-      PA_LIBRARY,
-      $name, $type,
-      @{ $funcs->{$name} }
-    );
-
-    *{ $pkg .'::'. lc($name) } =
-    *{ $pkg .'::'. $name     } = sub {
-      return $ffi->call(@_);
-    };
-  }
-}
-
-my $pa_getversiontext = FFI::Raw->new(
-  'libportaudio.so',
-  'Pa_GetVersionText',
-  FFI::Raw::str # return value
-);
-
-sub pa_getversiontext {
-  $pa_getversiontext->();
-}
-__PACKAGE__->_build_ffi_wrappers( \%funcs );
-
+attach_function 'Pa_GetSampleSize', [ _ulong ], PA_ERROR;
+attach_function 'Pa_Sleep', [ _long ], _void;
 
 
 
