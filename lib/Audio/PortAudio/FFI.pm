@@ -15,7 +15,7 @@ Audio::PortAudio::FFI - PortAudio bindings via FFI::Raw
 use v5.14;
 use Config;
 
-use FFI::Raw::Sweet qw( :core :types );
+use FFI::Sweet qw( :core :types );
 
 ffi_lib 'libportaudio.so.2';
 
@@ -23,6 +23,11 @@ use constant _long  => _int;
 use constant _ulong => _uint;
 # FFI::Raw 1.04 lacks a long type, but internally it
 # is explicitly 32 bits for its integer types. Not ideal?
+
+# FIXME: going to bug FFI::Raw about fixing the above, then
+# will add matching types in FFI::Sweet  -mh
+
+
 
 use constant {
   # Taking a page from ruby-portaudio with typedefs
