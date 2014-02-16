@@ -15,18 +15,11 @@ Audio::PortAudio::FFI - PortAudio bindings via FFI::Raw
 use v5.14;
 use Config;
 
-use FFI::Sweet qw( :core :types );
+use FFI::Sweet;
 
-ffi_lib 'libportaudio.so.2';
+use namespace::clean;
 
-use constant _long  => _int;
-use constant _ulong => _uint;
-# FFI::Raw 1.04 lacks a long type, but internally it
-# is explicitly 32 bits for its integer types. Not ideal?
-
-# FIXME: going to bug FFI::Raw about fixing the above, then
-# will add matching types in FFI::Sweet  -mh
-
+ffi_lib \'libportaudio.so.2';
 
 
 use constant {
@@ -91,6 +84,64 @@ use constant {
 # wrap up a struct definition reader that handles pack/unpack.
 # see FFI::Raw::MemPtr
 
+ffi_struct 'PaHostApiInfo' => (
+  struct_version => 'i',
+  type           => 'i',	# PA_HOST_API_TYPE_ID
+  name           => 'p',
+  device_count   => 'i',
+  default_input_device   => 'i',	# PA_DEVICE_INDEX
+  default_output_device  => 'i',	# PA_DEVICE_INDEX
+);
+
+ffi_struct 'PaHostErrorInfo' => (
+  host_api_type => 'i',	# PA_HOST_API_TYPE_ID
+  error_code    => 'l',
+  error_text    => 'p',
+);
+
+ffi_struct 'PaDeviceInfo' => (
+  struct_version => 'i',
+  name           => 'p',
+  host_api       => 'i',	# PA_HOST_API_INDEX
+  max_input_channels          => 'i',
+  max_output_channels         => 'i',
+  default_low_input_latency   => 'd',	# PA_TIME
+  default_low_output_latency  => 'd',	# PA_TIME
+  default_high_input_latency  => 'd',	# PA_TIME
+  default_high_output_latency => 'd',	# PA_TIME
+  default_sample_rate         => 'd',
+);
+
+ffi_struct 'PaStreamParameters' => (
+  device                    => 'i',	# PA_DEVICE_INDEX
+  channel_count             => 'i',
+  sample_format             => 'L',	# PA_SAMPLE_FORMAT
+  suggested_latency         => 'd',	# PA_TIME
+  host_specific_stream_info => 'x' . $Config{ptrsize},  #FIXME - opaque pointer handling
+) => sub {
+  #init method for this struct
+  my $self = shift;
+  $self->SUPER::init( @_ );
+  
+  #ruby has some code to magic the index from a Device passed in
+  #should we just make the device class stringify to its index?
+  
+  #remap from symbolic formats to the bit vector expected
+  if ( my $f = $self->{sample_format} ){
+    if ( my $v = SAMPLE_FORMAT_MAP()->{$f} ){
+      $self->{sample_format} = $v;
+    }
+  }
+
+};
+
+ffi_struct 'PaStreamInfo' => (
+  struct_version => 'i',
+  input_latency  => 'd',	# PA_TIME
+  output_latency => 'd',	# PA_TIME
+  sample_rate    => 'd',
+);
+
 
 # Function signatures from libportaudio2
 attach_function 'Pa_GetVersion', undef, _int;
@@ -135,7 +186,6 @@ attach_function 'Pa_GetStreamWriteAvailable', [ _ptr ], _long;
 
 attach_function 'Pa_GetSampleSize', [ _ulong ], PA_ERROR;
 attach_function 'Pa_Sleep', [ _long ], _void;
-
 
 
 1;

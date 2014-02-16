@@ -41,4 +41,22 @@ is(
   'error text'
 );
 
+Audio::PortAudio::FFI::Pa_Initialize();
+use Devel::Dwarn; 
+my $api_count = Audio::PortAudio::FFI::Pa_GetHostApiCount();
+note( "Got $api_count host apis" );
+for ( 0 .. ($api_count - 1) ){
+  my $hostapi = new_ok( 'Audio::PortAudio::FFI::PaHostApiInfo' );
+  my $p;
+  ok ( $p = Audio::PortAudio::FFI::Pa_GetHostApiInfo($_), "Get Hostapi $_ info" );
+  
+  #~ my $m = FFI::Raw::MemPtr->new_from_ptr($p);
+  #~ Dwarn $m->tostr;
+  
+  ok ( $hostapi->from_memptr( $p ), 'load hostapi struct' );
+  Dwarn $hostapi;
+}
+
+Audio::PortAudio::FFI::Pa_Terminate();
+
 done_testing();
